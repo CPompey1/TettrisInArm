@@ -102,6 +102,18 @@ gpio_interrupt_init:
 
 
 
+simple_read_character:
+
+	PUSH{lr}
+	;Load UARTDR base register
+	MOV r1, #0xC000
+	MOVT r1, #0x4000
+
+	;Load lower byte from UARTDR into r0
+	LDRB r0, [r1]
+
+	POP{lr}
+	MOV PC,LR      	; Return
 
 
 ;Inputs:
