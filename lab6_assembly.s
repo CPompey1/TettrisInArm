@@ -11,7 +11,7 @@
 	.global read_string		; This is from your Lab #6 Library
 	.global output_string		; This is from your Lab #6 Library
 	.global uart_init		; This is from your Lab #6 Library
-
+	.global lab6
 prompt:	.string "Press SW1 or a key (q to quit)", 0
 data_block: .word 0
 spacesMoved_block: .word 0
@@ -126,7 +126,6 @@ bottom:
 	LDRB r2, [r0,#1]
 
 	;Check if were at a border
-	cmp
 	;Load direction
 	LDRB r3, [r0,#3]
 
@@ -171,7 +170,7 @@ not_one:
 
 not_two:
 	cmp r3, #3
-	bne not_three
+	bne not_anything
 	;update locationX & Y
 	SUB r2, r2,r4
 
@@ -220,7 +219,9 @@ Timer_init:
 	MOV r0, #0x4003
 	MOVT r0, #0x0028
 	ldr r1, [r0]
-	MOV r1, #0xF42400
+	MOV r1, #0x2400
+	MOVT r1, #0x00F4
+
 	str r1, [r0]
 
 	;Configure timer to interrupt processor (1)->19th bit of 0xE000E100

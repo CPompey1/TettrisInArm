@@ -1,8 +1,8 @@
 #include <stdint.h>
-extern void lab5(void);
+extern void lab6(void);
 
 int main()
 {		
 
-	lab5();
+	lab6();
 }

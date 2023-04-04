@@ -1,14 +1,16 @@
+.data
 	.global uart_interrupt_init
 	.global gpio_interrupt_init
 	.global UART0_Handler
 	.global Switch_Handler
 	.global Timer_Handler		; This is needed for Lab #6
-	.global simple_read_character
+	.global read_character
 	.global output_character	; This is from your Lab #6 Library
 	.global read_string		; This is from your Lab #6 Library
 	.global output_string		; This is from your Lab #6 Library
 	.global uart_init		; This is from your Lab #6 Library
 
+.text
 uart_interrupt_init:
 	PUSH {lr}
 	;Set the Receive Interrupt Mask (RXIM) bit in the UART Interrupt Mask Register (UARTIM)
@@ -99,184 +101,42 @@ gpio_interrupt_init:
 	MOV pc, lr
 
 
-UART0_Handler:
-
-	PUSH {lr}
-	; Remember to preserver registers r4-r11 by pushing then popping
-	; them to & from the stack at the beginning & end of the handler
-	PUSH {r4-r11}
-
-	;Clear Interrupt: Set the bit 4 (RXIC) in the UART Interrupt Clear Register (UARTICR)
-	;UART0 Base Address: 0x4000C000
-	;UARTICR Offset: 0x044
-	;UART0 Bit Position: Bit 4
-
-	MOV r0, #0xC000
-	MOVT r0, #0x4000
-
-
-	LDR r2, [r0, #0x044]
-
-	ORR r2, r2, #16		;bit 4 has 1
-
-	STR r2, [r0, #0x044]
-
-
-	;increment key presses
-	ldr r0, ptr_to_mydata
-	LDRB r1, [r0]
-	ADD r1, r1, #1
-	STRB r1, [r0]
-
-	;lowercase q ascii: 113
-	;Carriage return: 13 -> moves cursor to the beggining of the current line
-	;Line Feed: 10  -> moves cursor down one line
-	;Form Feed: 12  -> clears the screen
 
 
 
-	POP{r4-r11}
-	POP {LR}
-	BX lr       	; Return
+;Inputs:
+;outputs: r0 - character from uart
+;Used (unpreservered)Registers:
+read_character:
+
+	;Read charactor from uart and store in r0
+	PUSH {lr}   ; Store register lr on stack
+
+FLAGCHECK:
+	;Load UARTFR base register
+	MOV r1, #0xC000
+	MOVT r1, #0x4000
+
+	;Get UART0 flag byte
+	LDRB r2, [r1,#0x18]
+
+	;Check Flag(RxFE) to ensure buffer is full (when RxFE is 0)
+	;Store mask of (16 & flagRegister)
+	AND r3, r2, #0x10
+
+
+	;Branch to  flagcheck if resultMask is 16
+	CMP r3,#0x10
+	BEQ FLAGCHECK
+
+	;Load lower byte from UARTDR into r0
+	LDRB r0, [r1,#0]
 
 
 
-Switch_Handler:
 
-	; Your code for your UART handler goes here.
-	; Remember to preserver registers r4-r11 by pushing then popping
-	; them to & from the stack at the beginning & end of the handler
-	PUSH {lr}
-	PUSH {r4-r11}
-
-
-	;clear interrupt register GPIOICR
-	MOV r0, #0x541C
-	MOVT r0, #0x4002
-	LDR r1,[r0]
-	ORR r1, r1,#16
-	STR r1, [r0]
-
-	;Incrament switch pressesS
-	ldr r0,ptr_to_mydata
-	LDRB r1,[r0];Modify first byte
-	ADD r1, r1,#1
-	STRB r1,[r0]
-
-	POP {r4-r11}
 	POP {lr}
-	BX lr       	; Return
-
-
-
-
-;************************************************************************START PRINT DATA************************************************************************
-;print_data
-;	-prints data loaded in data word block as well as a bar graph
-;	- uses no unpreserved registers
-print_data:
-	PUSH{lr}
-	;Print switch presses
-	ldr r0, ptr_to_switch_presses_str
-	bl output_string
-	LDR r0, ptr_to_mydata
-	LDRB r0, [r0]
-	ldr r1, ptr_to_num_1_string
-	bl int2string
-	MOV r0,r1
-	bl output_string
-
-
-	;load key presses
-	ldr r0, ptr_to_mydata
-	LDRB r1, [r0,#1]
-
-	;Print key presses
-	ldr r0, ptr_to_key_presses_str
-	bl output_string
-	ldr r0, ptr_to_mydata
-	ldrb r0, [r0,#1]
-	ldr r1,ptr_to_num_2_string
-	bl int2string
-	MOV r0,r1
-	bl output_string
-
-	;Print newline
-	MOV r0, #0x0A
-	bl output_character
-
-
-
-
-	;Print Bargraph
-	;load switch presses
-	ldr r0, ptr_to_mydata
-	LDRB r1, [r0]
-
-	;Check if zero
-	cmp r1,#0
-	beq print_key_press_graph
-
-	;For all switchpresses print x's
-print_switch_presses_loop:
-	PUSH {r0,r1,r2}
-	MOV r0, #120
-	bl output_character
-	POP {r0,r1,r2}
-	ADD r1, r1,#-1
-	CMP r1, #0
-	BNE print_switch_presses_loop
-
-	;Print newline
-	PUSH {r0,r1,r2}
-	MOV r0, #0x0A
-	bl output_character
-	POP {r0,r1,r2}
-
-	;print carriage return
-	PUSH {r0,r1,r2}
-	MOV r0, #0x0d
-	bl output_character
-	POP {r0,r1,r2}
-
-print_key_press_graph:
-	;Load key presses
-	ldr r0, ptr_to_mydata
-	LDRB r1, [r0,#1]
-
-	;Check if zero
-	cmp r1,#0
-	beq finish_print_data
-
-	;For all keypresses print x's
-print_key_presses_loop:
-	PUSH {r0,r1,r2}
-	MOV r0, #120
-	bl output_character
-	POP {r0,r1,r2}
-	ADD r1, r1, #-1
-	CMP r1, #0
-	BNE print_key_presses_loop
-	;Print newline
-
-	PUSH {r0,r1,r2}
-	MOV r0, #0x0A
-	bl output_character
-	POP {r0,r1,r2}
-
-	;print carriage return
-	PUSH {r0,r1,r2}
-	MOV r0, #0x0d
-	bl output_character
-	POP {r0,r1,r2}
-finish_print_data:
-
-	POP {LR}
-	MOV PC,LR
-;************************************************************************END PRINT DATA************************************************************************
-simple_read_character:
-
-	MOV PC,LR      	; Return
+	mov pc, lr
 
 
 output_string:
