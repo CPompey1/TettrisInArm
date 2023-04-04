@@ -16,6 +16,10 @@ prompt:	.string "Press SW1 or a key (q to quit)", 0
 data_block: .word 0
 spacesMoved_block: .word 0
 
+top_bottom_borders: .string "--------------------", 0
+side_borders: .string "|                    |", 0 ;The board is 20 characters by 20 characters in size (actual size inside the walls).
+middle_row: .string "|          *         |", 0 
+
 
 	.text
 
@@ -24,6 +28,10 @@ spacesMoved_block: .word 0
 ptr_to_prompt:				.word prompt
 prt_to_dataBlock: 			.word data_block
 prt_to_spacesMoved_block:	.word spacesMoved_block
+
+ptr_to_top_bottom_borders:		.word top_bottom_borders
+ptr_to_side_borders:		.word side_borders
+ptr_to_middle_row:          .word middle_row
 
 
 ;***************Data packet orginization*******************************
@@ -38,7 +46,11 @@ lab6:	; This is your main routine which is called from your C wrapper
 
 	;Updata locationX and locationY to be at center
 	;Start game
-	bl Timer_init
+	BL Timer_init
+	
+	LDR r4, ptr_to_top_bottom_borders ; load border string into registers
+	LDR r5, ptr_to_side_borders ;load string into register
+   	LDR r6, ptr_to_middle_row
 
 	MOV pc, lr
 
@@ -68,7 +80,40 @@ Timer_Handler:
 	str r1,[r0]
 
 
-	;Print_borders
+;Print_borders
+print_borders:
+        MOV r0, r4 ;move top and bottom border to the register used as an argument in output_string
+        BL output_string ; branch to output_string (assuming output_string uses r0 as the argument)
+
+        MOV r1, #0 ;move 0 into r1 (or any free register) to use as a counter
+
+        MOV r0, r5 ; move side borders to the register used as an argument in output_string (could do it in the loop but this is a bit faster i think)
+        BL side_loop ; branch to loop that will print out the sides of the board
+
+side_loop: ;    
+        CMP r1, #9 ;compare to see if we are in the middle of the 20 rows
+        BEQ print_middle; print out the middle row 
+
+        BL output_string ;r0 (or whichever register is used as an argument in output_string) should already hold the side borders
+
+        ADD r1, r1, #1 ;increment counter
+        B side_loop ;Branch back to the loop to print the next line or
+
+print_middle: 
+        MOV r0, r6
+        BL output_string ;r0 (or whichever register is used as an argument in output_string) should already hold the side borders
+    
+after_middle: 
+        CMP r1, #20  ;(or #21?) compare to see if we have entered the loop 20 times (if we have printed all the side borders)
+        BEQ bottom ;if all the sides are done we just have to print the bottom border
+
+        MOV r0, r5
+        BL output_string ;r0 (or whichever register is used as an argument in output_string) should already hold the side borders
+    
+bottom:
+        MOV r0, r4 ;move top and bottom border to the register used as an argument in output_string
+        BL output_string ; branch to output_string (assuming output_string uses r0 as the argument)
+	
 
 	;print_location
 	;Load locationX and locationY
