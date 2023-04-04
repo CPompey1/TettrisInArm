@@ -29,9 +29,14 @@ ptr_to_prompt:		.word prompt
 lab6:	; This is your main routine which is called from your C wrapper
 	PUSH {lr}   		; Store lr to stack
 
+	BL uart_interrupt_init
+	BL gpio_interrupt_init
 
 	MOV pc, lr
 
+;Timer_handler(print_screen) handler subroutine
+;Desction
+;	Refreshes the player location and borders upon a timer interrupts
 Timer_Handler:
 
 	; Your code for your Timer handler goes here.  It is not needed
@@ -43,13 +48,38 @@ Timer_Handler:
 	; them to & from the stack at the beginning & end of the handler.
 
 	;Preserve registers
-	;Clear timer interrupt
+	PUSH {lr}
+
+	;Clear timer interrupt (1)->0th bit of 0x40030024
+	MOV r0 ,#0x0024
+	MOVT r0, #0x4003
+
+
 	;Print_borders
+
 	;print_location
 	;update_location
 	;Change cursor back to end of string
 	;Pop registers
+	BX LR
 
+Timer_init:
+	PUSH {lr}
+	;Enable clock (1)->0th bit of: 0x400FE604
+	;enable (1)->1st bit of:  0x40030000
+	;Put timer into Periodic mode GPTMTAMR (1)->2nd bit 0x40030004
+	;Setup Interrupt interval period (GPTMTAILR) register0x40030028
+	;set to 16M -> 16,000,000-> 0xF42400 ticks per cycle
+	;Configure timer to interrupt processor (1)->19th bit of 0xE000E100
+	;Enable timer 1->1st bit of 0x4003000C
+	POP {lr}
+	MOV pc,lr
+
+Switch_Handler:
 	BX lr       	; Return
+
+UART0_Handler:
+	BX lr
+
 
 	.end
