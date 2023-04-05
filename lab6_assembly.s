@@ -45,28 +45,6 @@ lab6:	; This is your main routine which is called from your C wrapper
 	BL uart_init
 	BL uart_interrupt_init
 	BL gpio_interrupt_init
-
-<<<<<<< HEAD
-	LDR r4, ptr_to_top_bottom_borders ; load border string into registers
-	LDR r5, ptr_to_side_borders ;load string into register
-   	LDR r6, ptr_to_middle_row
-=======
-	;Updata locationX and locationY to be at center
-	LDR r0, prt_to_dataBlock ;load the datablock into r0
-
-	MOV r1, #10 ;move 10 into r1 as intial location will be 10,10 as that is the middle of a 20x20 board
-	;LocationX
-	LDRB r1, [r0,#0]
-
-	;LocationY
-	LDRB r1, [r0,#1]
-
-	;Start game
-	BL Timer_init
-	
-	LDR r5, ptr_to_cursor_position
->>>>>>> origin/saahil_branch
-
 	;Updata locationX and locationY to be at center
 	;Start game
 	BL Timer_init
