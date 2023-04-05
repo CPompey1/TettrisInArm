@@ -40,17 +40,25 @@ ptr_to_middle_row:          .word middle_row
 ;**********************************************************************
 lab6:	; This is your main routine which is called from your C wrapper
 	PUSH {lr}   		; Store lr to stack
-
+	BL uart_init
 	BL uart_interrupt_init
 	BL gpio_interrupt_init
+
+	LDR r4, ptr_to_top_bottom_borders ; load border string into registers
+	LDR r5, ptr_to_side_borders ;load string into register
+   	LDR r6, ptr_to_middle_row
 
 	;Updata locationX and locationY to be at center
 	;Start game
 	BL Timer_init
-	
-	LDR r4, ptr_to_top_bottom_borders ; load border string into registers
-	LDR r5, ptr_to_side_borders ;load string into register
-   	LDR r6, ptr_to_middle_row
+	MOV r0,r0
+	MOV r0,r0
+	MOV r0,r0
+	MOV r0,r0
+	MOV r0,r0
+	MOV r0,r0
+	MOV r0,r0
+
 
 	MOV pc, lr
 
@@ -207,8 +215,8 @@ Timer_init:
 	str r1, [r0]
 
 	;Put timer into Periodic mode GPTMTAMR (1)->2nd bit 0x40030004
-	MOV r0, #0x4003
-	MOVT r0, #0x0004
+	MOV r0, #0x0004
+	MOVT r0, #0x4003
 	ldr r1, [r0]
 	orr r1, r1, #2
 	str r1, [r0]
@@ -216,8 +224,8 @@ Timer_init:
 
 	;Setup Interrupt interval period (GPTMTAILR) register0x40030028
 	;set to 16M -> 16,000,000-> 0xF42400 ticks per cycle
-	MOV r0, #0x4003
-	MOVT r0, #0x0028
+	MOV r0, #0x0028
+	MOVT r0, #0x4003
 	ldr r1, [r0]
 	MOV r1, #0x2400
 	MOVT r1, #0x00F4

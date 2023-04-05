@@ -17,7 +17,7 @@ uart_interrupt_init:
 	;UART0 Base Address: 0x4000C000
 	;UARTIM offset: 0x038
 	;RXIM bit position: 4
-
+	bl uart_init
 	MOV r0, #0xC000
 	MOVT r0, #0x4000
 
@@ -57,7 +57,7 @@ gpio_interrupt_init:
 	; to initialize SW1.
 
 
-
+	bl tiva_pushbtn_init
 	;enable interrupt sensitivitye register GPIOIS
 	MOV r0, #0x5404
 	MOVT r0, #0x4002
@@ -457,6 +457,7 @@ gpio_btn_and_LED_init:
 ;LEDs: Port B, pins 0-3
 	PUSH {lr} ; Store register lr on stack
 
+	bl tiva_pushbtn_init
 	;enabling clock for port B and D
 	;clock control register base address: 0x400FE608
 	MOV r0, #0xE608
