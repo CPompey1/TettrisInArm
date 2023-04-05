@@ -6,12 +6,14 @@
 	.global UART0_Handler
 	.global Switch_Handler
 	.global Timer_Handler		; This is needed for Lab #6
-	.global simple_read_character
 	.global output_character	; This is from your Lab #6 Library
 	.global read_string		; This is from your Lab #6 Library
 	.global output_string		; This is from your Lab #6 Library
 	.global uart_init		; This is from your Lab #6 Library
+	.global simple_read_character
 	.global lab6
+	.global output_string_nw
+
 prompt:	.string "Press SW1 or a key (q to quit)", 0
 data_block: .word 0
 spacesMoved_block: .word 0
@@ -19,8 +21,10 @@ spacesMoved_block: .word 0
 output: .string "Total Moves Made: ", 0 
 top_bottom_borders: .string "--------------------", 0
 side_borders: .string "|                    |", 0 ;The board is 20 characters by 20 characters in size (actual size inside the walls).
-cursor_position: .string 27, "[10;10H" ;set up a cursor position variable that will be 10 - 10
-clear_screen: .string 27, "[2J" ; clear screen cursor position moved to home row 0, line 0 
+cursor_position: .string 27, "[10;10H",0 ;set up a cursor position variable that will be 10 - 10
+clear_screen: .string 27, "[2J",0 ; clear screen cursor position moved to home row 0, line 0zzz
+backspace:	.string 27, "[08", 0
+asterisk:	.string 27, "[2A", 0
 
 	.text
 
@@ -35,24 +39,44 @@ ptr_to_side_borders:		.word side_borders
 ptr_to_cursor_position: 	.word cursor_position
 ptr_to_clear_screen: 		.word clear_screen
 ptr_to_output:				.word output
-
+ptr_to_backspace:				.word backspace
+ptr_to_asterisk:				.word asterisk
 ;***************Data packet orginization*******************************
 ;	|LocationX	|LocationY	|SW1Presses	|Direction| EndBit|
 ;	0		    8		    16		    24-25	  31
 ;**********************************************************************
 lab6:	; This is your main routine which is called from your C wrapper
 	PUSH {lr}   		; Store lr to stack
+	
+	LDR r4, ptr_to_top_bottom_borders ; load border string into registers
+	LDR r5, ptr_to_side_borders ;load string into register
 	BL uart_init
 	BL uart_interrupt_init
 	BL gpio_interrupt_init
+	
 	;Updata locationX and locationY to be at center
+	LDR r0, prt_to_dataBlock ;load the datablock into r0
+
+	MOV r1, #10 ;move 10 into r1 as intial location will be 10,10 as that is the middle of a 20x20 board
+	;LocationX
+	LDRB r1, [r0,#0]
+
+	;LocationY
+	LDRB r1, [r0,#1]
+
 	;Start game
 	BL Timer_init
-loop:
-	MOV r0,r0
-	MOV r0,r0
-	MOV r0,r0
-	b loop
+
+	LDR r5, ptr_to_cursor_position
+	;Start game
+	BL Timer_init
+
+inf_loop:
+	LDR r0, prt_to_dataBlock
+	LDRB r1, [r0, #3]
+	LSR r1, #7
+	CMP r1, #1
+	BNE inf_loop
 
 	;poll until endbit is 1
 	POP {lr}
@@ -81,7 +105,44 @@ Timer_Handler:
 	LDR r1, [r0]
 	ORR r1, #1
 	str r1,[r0]
-	
+		;Clear screen
+	LDR r0, ptr_to_clear_screen ;clear the screen and moves cursor to 0,0
+	BL output_string
+
+;Print_borders
+print_borders:
+        LDR r0, ptr_to_top_bottom_borders ;move top and bottom border to the register used as an argument in output_string
+        BL output_string ; branch to output_string
+
+        MOV r1, #0 ;move 0 into r1 (or any free register) to use as a counter
+
+        LDR r0, ptr_to_side_borders ; move side borders to the register used as an argument in output_string (could do it in the loop but this is a bit faster i think)
+        BL side_loop ; branch to loop that will print out the sides of the board
+
+side_loop:
+        CMP r1, #20  ;(or #21?) compare to see if we have entered the loop 20 times (if we have printed all the side borders)
+        BEQ bottom ;if all the sides are done we just have to print the bottom border
+
+		push {r0-r4}
+		LDR r0, ptr_to_side_borders
+        BL output_string ;r0 should already hold the side borders
+		pop {r0-r4}
+        ADD r1, r1, #1 ;increment counter
+        B side_loop ;Branch back to the loop to print the next line or
+
+bottom:
+        LDR r0, ptr_to_top_bottom_borders ;move top and bottom border to the register used as an argument in output_string
+        BL output_string ; branch to output_string
+
+insert_asterisk:
+		ldr r0,ptr_to_cursor_position  ;cursor position to position of x,y
+		BL output_string_nw ;move cursor
+
+		LDR r0, ptr_to_backspace ;backspace once to get rid of the whitespace and prepare it to be replaced with "*"
+		BL output_string_nw; backspace once
+		LDR r0, ptr_to_asterisk ; asterisk
+		BL output_string_nw ;enter the asterisk
+
 	;print_location
 	;Load locationX and locationY
 	ldr r0, prt_to_dataBlock
@@ -91,19 +152,6 @@ Timer_Handler:
 
 	;LocationY
 	LDRB r2, [r0,#1]
-
-	;Check if were at a border
-;	CMP r1, #0 ;border should be at 0 and 21 for the sides and top and bottom 
-;	BLE y_check ;if x <= 0 check the y value (as with increasing speeds we could've hopped out of bounds with one move)
-
-;	CMP r1, #21  ;
-;	BGE y_check ;if x >= 21 exit as 0 should be a border as with increasing speeds we could've hopped out of bounds with one move
-
-;y_check:
-;	CMP r2, #0 
-;	BLE exit ;if y also <= 0 then exit as we are at a border if not keep going
-;	CMP r2, #21 ;check if r2 is greater than or equal to 21
-;	BGE exit ;subroutine is at the bottom of the code right before ".end"
 	
 	;Load direction
 	LDRB r3, [r0,#3]
@@ -166,6 +214,7 @@ not_two:
 	;Pop registers
 end_timer_handler:
 	POP {r4-r11}
+	POP {lr}
 	BX LR
 
 
@@ -210,9 +259,8 @@ Timer_init:
 	MOV r0, #0x0028
 	MOVT r0, #0x4003
 	ldr r1, [r0]
-	;MOV r1, #0x2400
-	;MOVT r1, #0x00F4
-	MOV r1,#2000
+	MOV r1, #0x2400
+	MOVT r1, #0x00F4
 	str r1, [r0]
 
 	;Setup interrup intervbal to interrupt the processor 1->0th bit of 0x40030018

@@ -10,6 +10,9 @@
 	.global output_string		; This is from your Lab #6 Library
 	.global output_string_nw
 	.global uart_init		; This is from your Lab #6 Library
+	.global simple_read_character
+	.global output_string_nw
+
 
 .text
 uart_interrupt_init:
