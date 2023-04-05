@@ -17,7 +17,6 @@ uart_interrupt_init:
 	;UART0 Base Address: 0x4000C000
 	;UARTIM offset: 0x038
 	;RXIM bit position: 4
-	bl uart_init
 	MOV r0, #0xC000
 	MOVT r0, #0x4000
 
