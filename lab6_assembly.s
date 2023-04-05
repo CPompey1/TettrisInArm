@@ -13,18 +13,20 @@
 	.global simple_read_character
 	.global lab6
 	.global output_string_nw
+	.global parse_string
 
 prompt:	.string "Press SW1 or a key (q to quit)", 0
 data_block: .word 0
 spacesMoved_block: .word 0
 
 output: .string "Total Moves Made: ", 0 
-top_bottom_borders: .string "--------------------", 0
+top_bottom_borders: .string " --------------------", 0
 side_borders: .string "|                    |", 0 ;The board is 20 characters by 20 characters in size (actual size inside the walls).
 cursor_position: .string 27, "[10;10H",0 ;set up a cursor position variable that will be 10 - 10
+home: .string 27, "[0;0H",0
 clear_screen: .string 27, "[2J",0 ; clear screen cursor position moved to home row 0, line 0zzz
 backspace:	.string 27, "[08", 0
-asterisk:	.string 27, "[2A", 0
+asterisk:	.string 27, "*", 0
 
 	.text
 
@@ -41,6 +43,7 @@ ptr_to_clear_screen: 		.word clear_screen
 ptr_to_output:				.word output
 ptr_to_backspace:				.word backspace
 ptr_to_asterisk:				.word asterisk
+ptr_to_home: 					.word home
 ;***************Data packet orginization*******************************
 ;	|LocationX	|LocationY	|SW1Presses	|Direction| EndBit|
 ;	0		    8		    16		    24-25	  31
@@ -108,6 +111,8 @@ Timer_Handler:
 		;Clear screen
 	LDR r0, ptr_to_clear_screen ;clear the screen and moves cursor to 0,0
 	BL output_string
+	LDR r0, ptr_to_home
+	BL output_string
 
 ;Print_borders
 print_borders:
@@ -138,10 +143,12 @@ insert_asterisk:
 		ldr r0,ptr_to_cursor_position  ;cursor position to position of x,y
 		BL output_string_nw ;move cursor
 
-		LDR r0, ptr_to_backspace ;backspace once to get rid of the whitespace and prepare it to be replaced with "*"
-		BL output_string_nw; backspace once
-		LDR r0, ptr_to_asterisk ; asterisk
-		BL output_string_nw ;enter the asterisk
+		;LDR r0, ptr_to_backspace ;backspace once to get rid of the whitespace and prepare it to be replaced with "*"
+		;BL output_string_nw; backspace once
+		;LDR r0, ptr_to_asterisk ; asterisk
+		;BL output_string_nw ;enter the asterisk
+		MOV r0, #42
+		bl output_character
 
 	;print_location
 	;Load locationX and locationY
@@ -169,10 +176,31 @@ insert_asterisk:
 	STRB r1, [r0,#0]
 
 	;Change cursor location string to equal the new position of x and y 
+	CMP r1, #9
+	BGT	second_dig
+	b end_timer_handler
+second_dig:
+
+	PUSH {r0-r4}
+	MOV r0, r1
+	BL int2string
+
+	LDR r3, [r1]
+	LDR r0, ptr_to_cursor_postion
+	MOV r2, #2
+	STRB r3, [r0,r2]
+
+	LDR r3, [r1, #1]
+	LDR r0, ptr_to_cursor_postion
+	MOV r2, #3
+	STRB r3, [r0,r2]
+	POP {r0-r4}
 
 	;branch to end of if
 	b end_timer_handler
 
+	;r5 will store pointer to string
+	;r6 will store index to replace
 not_zero:
 	cmp r3, #1
 	bne not_one
@@ -182,6 +210,26 @@ not_zero:
 	;Store location
 	STRB r1, [r0,#0]
 
+	CMP r1, #9
+	BGT	second_dig1
+	b end_timer_handler
+second_dig1:
+
+	PUSH {r0-r4}
+	MOV r0, r1
+	BL int2string
+
+	LDR r3, [r1]
+	LDR r0, ptr_to_cursor_postion
+	MOV r2, #2
+	STRB r3, [r0,r2]
+
+	LDR r3, [r1, #1]
+	LDR r0, ptr_to_cursor_postion
+	MOV r2, #3
+	STRB r3, [r0,r2]
+	POP {r0-r4}
+	;change both digits
 	;branch to end of if
 	b end_timer_handler
 
@@ -194,6 +242,25 @@ not_one:
 	;Store location
 	STRB r1, [r2,#1]
 
+	CMP r2, #9
+	BGT	second_dig2
+	b end_timer_handler
+second_dig2:
+
+	PUSH {r0-r4}
+	MOV r0, r2
+	BL int2string
+
+	LDR r3, [r2]
+	LDR r0, ptr_to_cursor_postion
+	MOV r1, #2
+	STRB r3, [r0,r1]
+
+	LDR r3, [r2, #1]
+	LDR r0, ptr_to_cursor_postion
+	MOV r1, #3
+	STRB r3, [r0,r1]
+	POP {r0-r4}
 	;branch to end of if
 	b end_timer_handler
 
@@ -206,6 +273,46 @@ not_two:
 	;Store location
 	STRB r1, [r2,#1]
 
+	CMP r2, #9
+	BGT	second_dig3
+	CMP r2, #10
+	BLT one_digi
+
+one_digi:
+	PUSH {r0-r4}
+	MOV r0, r2
+	BL int2string
+
+	LDR r3, [r2]
+	LDR r0, ptr_to_cursor_postion
+	MOV r1, #2
+	STRB r3, [r0,r1]
+
+	LDR r3, [r2, #1]
+	LDR r0, ptr_to_cursor_postion
+	MOV r1, #3
+	STRB r3, [r0,r1]
+	POP {r0-r4}
+
+
+
+	b end_timer_handler
+second_dig3:
+
+	PUSH {r0-r4}
+	MOV r0, r2
+	BL int2string
+
+	LDR r3, [r2]
+	LDR r0, ptr_to_cursor_postion
+	MOV r1, #2
+	STRB r3, [r0,r1]
+
+	LDR r3, [r2, #1]
+	LDR r0, ptr_to_cursor_postion
+	MOV r1, #3
+	STRB r3, [r0,r1]
+	POP {r0-r4}
 	;branch to end of if
 	b end_timer_handler
 

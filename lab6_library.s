@@ -12,6 +12,7 @@
 	.global uart_init		; This is from your Lab #6 Library
 	.global simple_read_character
 	.global output_string_nw
+	.global parse_string
 
 
 .text
@@ -791,6 +792,30 @@ read_tiva_pushbutton_end:
 
 	POP {lr}
 	MOV pc, lr
+
+parse_string: ; start
+    PUSH {lr}       ; save the return address
+    MOV r5, #0      ; initialize loop counter to 0
+    loop:
+        LRDB r4, [r2, r4]  ; load current character
+        CMP r5, #0          ; check for null terminator
+        BEQ done            ; exit loop if end of string
+        ADD r4, r4, #1      ; increment loop counter
+        CMP r3, r4          ; compare loop counter with index (r2 has index that we want to change)
+        BNE loop            ; continue looping if not equal
+        STRB r2, [r2, r4]   ; store new character at index
+    done:
+        pop {lr}        ; return
+        mov pc, lr
+strlen:
+    PUSH {lr}
+    LDRB r0, [r1, r2]
+    ADD r2,r2,#1 ;intialized as a 0
+    CMP r0, #0x0
+    BNE strlen
+
+    POP{lr}
+    mov pc, lr
 ;****************************************************************END HELPER SUBROUTINES************************************************************************
 
 
