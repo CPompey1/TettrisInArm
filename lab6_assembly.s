@@ -87,42 +87,7 @@ Timer_Handler:
 	ORR r1, #1
 	str r1,[r0]
 
-
-;Print_borders
-print_borders:
-        MOV r0, r4 ;move top and bottom border to the register used as an argument in output_string
-        BL output_string ; branch to output_string (assuming output_string uses r0 as the argument)
-
-        MOV r1, #0 ;move 0 into r1 (or any free register) to use as a counter
-
-        MOV r0, r5 ; move side borders to the register used as an argument in output_string (could do it in the loop but this is a bit faster i think)
-        BL side_loop ; branch to loop that will print out the sides of the board
-
-side_loop: ;    
-        CMP r1, #9 ;compare to see if we are in the middle of the 20 rows
-        BEQ print_middle; print out the middle row 
-
-        BL output_string ;r0 (or whichever register is used as an argument in output_string) should already hold the side borders
-
-        ADD r1, r1, #1 ;increment counter
-        B side_loop ;Branch back to the loop to print the next line or
-
-print_middle: 
-        MOV r0, r6
-        BL output_string ;r0 (or whichever register is used as an argument in output_string) should already hold the side borders
-    
-after_middle: 
-        CMP r1, #20  ;(or #21?) compare to see if we have entered the loop 20 times (if we have printed all the side borders)
-        BEQ bottom ;if all the sides are done we just have to print the bottom border
-
-        MOV r0, r5
-        BL output_string ;r0 (or whichever register is used as an argument in output_string) should already hold the side borders
-    
-bottom:
-        MOV r0, r4 ;move top and bottom border to the register used as an argument in output_string
-        BL output_string ; branch to output_string (assuming output_string uses r0 as the argument)
 	
-
 	;print_location
 	;Load locationX and locationY
 	ldr r0, prt_to_dataBlock
@@ -207,7 +172,14 @@ Timer_init:
 	ORR r1, r1, #1
 	str r1, [r0]
 
-	;enable (1)->1st bit of:  0x40030000
+	;enable GPTMCTL TAEN (1)->1st bit of:  0x40030000
+	MOV r0, #0x000C
+	MOVT r0, #0x4003
+	ldr r1, [r0]
+	orr r1, r1, #1
+	str r1, [r0]
+
+	;enable 32 mbit mode (1)->1st bit of:  0x40030000
 	MOV r0, #0x0000
 	MOVT r0, #0x4003
 	ldr r1, [r0]
@@ -219,6 +191,8 @@ Timer_init:
 	MOVT r0, #0x4003
 	ldr r1, [r0]
 	orr r1, r1, #2
+	MVN r2, #1
+	AND r1,r1,r2
 	str r1, [r0]
 
 
@@ -229,14 +203,22 @@ Timer_init:
 	ldr r1, [r0]
 	MOV r1, #0x2400
 	MOVT r1, #0x00F4
-
 	str r1, [r0]
+
+	;Setup interrup intervbal to interrupt the processor 1->0th bit of 0x40030018
+	MOV r0, #0x0018
+	MOVT r0, #0x4003
+	ldr r1,[r0]
+	orr r1,#1
+	str r1,[r0]
 
 	;Configure timer to interrupt processor (1)->19th bit of 0xE000E100
 	MOV r0, #0xE100
 	MOVT r0, #0xE000
 	ldr r1, [r0]
-	orr r1, r1, #1
+	MOV r2,#1
+	lsl r2,r2,#19
+	orr r1, r1, r2
 	str r1, [r0]
 
 	;Enable timer 1->1st bit of 0x4003000C
