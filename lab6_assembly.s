@@ -51,16 +51,14 @@ lab6:	; This is your main routine which is called from your C wrapper
 	;Updata locationX and locationY to be at center
 	;Start game
 	BL Timer_init
+loop:
 	MOV r0,r0
 	MOV r0,r0
 	MOV r0,r0
-	MOV r0,r0
-	MOV r0,r0
-	MOV r0,r0
-	MOV r0,r0
+	b loop
 
 	;poll until endbit is 1
-
+	POP {lr}
 	MOV pc, lr
 
 ;Timer_handler(print_screen) handler subroutine
@@ -173,18 +171,20 @@ Timer_init:
 	ORR r1, r1, #1
 	str r1, [r0]
 
-	;enable GPTMCTL TAEN (1)->1st bit of:  0x40030000
+	;disable GPTMCTL TAEN (1)->1st bit of:  0x4003000C
 	MOV r0, #0x000C
 	MOVT r0, #0x4003
 	ldr r1, [r0]
-	orr r1, r1, #1
+	mvn r2, #1
+	and r1,r1,r2
 	str r1, [r0]
 
 	;enable 32 mbit mode (1)->1st bit of:  0x40030000
 	MOV r0, #0x0000
 	MOVT r0, #0x4003
 	ldr r1, [r0]
-	orr r1, r1, #1
+	mvn r2,  #1
+	and r1, r2,r1
 	str r1, [r0]
 
 	;Put timer into Periodic mode GPTMTAMR (1)->2nd bit 0x40030004
