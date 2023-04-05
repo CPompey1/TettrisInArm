@@ -8,6 +8,7 @@
 	.global output_character	; This is from your Lab #6 Library
 	.global read_string		; This is from your Lab #6 Library
 	.global output_string		; This is from your Lab #6 Library
+	.global output_string_nw
 	.global uart_init		; This is from your Lab #6 Library
 
 .text
@@ -149,6 +150,28 @@ FLAGCHECK:
 	POP {lr}
 	mov pc, lr
 
+output_string_nw:
+;transmits a NULL-terminated ASCII string for display in PuTTy.
+;The base address of the string should be passed into the routine in r0.
+
+	PUSH {lr}   ; Store register lr on stack
+	PUSH {r4}	; pushing r4 to make a copy of base address (currently in r0)
+
+	MOV r4, r0	;making copy of base address in r4
+	MOV r2, #0
+Outputting_nw:
+	LDRB r0, [r4]		; loading the character from the base address in r4
+	BL output_character	;call output_character
+	ADD r4, r4, #1;		increment r4's address by 1
+
+	LDRB r1, [r4]
+	CMP r1, r2			;checking if data in r4 is NULL
+	BNE Outputting_nw		; if it is not, go back
+
+
+	POP{r4}
+	POP {lr}
+	mov pc, lr
 
 output_string:
 ;transmits a NULL-terminated ASCII string for display in PuTTy.

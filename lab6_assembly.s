@@ -59,6 +59,7 @@ lab6:	; This is your main routine which is called from your C wrapper
 	MOV r0,r0
 	MOV r0,r0
 
+	;poll until endbit is 1
 
 	MOV pc, lr
 
@@ -201,8 +202,9 @@ Timer_init:
 	MOV r0, #0x0028
 	MOVT r0, #0x4003
 	ldr r1, [r0]
-	MOV r1, #0x2400
-	MOVT r1, #0x00F4
+	;MOV r1, #0x2400
+	;MOVT r1, #0x00F4
+	MOV r1,#2000
 	str r1, [r0]
 
 	;Setup interrup intervbal to interrupt the processor 1->0th bit of 0x40030018
