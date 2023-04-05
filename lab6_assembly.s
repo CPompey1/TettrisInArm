@@ -264,9 +264,90 @@ Timer_init:
 	MOV pc,lr
 
 Switch_Handler:
+
+	; Your code for your UART handler goes here.
+	; Remember to preserver registers r4-r11 by pushing then popping
+	; them to & from the stack at the beginning & end of the handler
+	PUSH {lr}
+	PUSH {r4-r11}
+
+
+	;clear interrupt register GPIOICR
+	MOV r0, #0x541C
+	MOVT r0, #0x4002
+	LDR r1,[r0]
+	ORR r1, r1,#16
+	STR r1, [r0]
+
+	;Incrament switch presses (Speed)
+	ldr r0,prt_to_dataBlock
+	LDRB r1,[r0, #2]		;Modify third byte
+	ADD r1, r1,#1
+	STRB r1,[r0, #2]
+
+	POP {r4-r11}
+	POP {lr}
 	BX lr       	; Return
 
 UART0_Handler:
+
+	PUSH {lr}
+	; Remember to preserver registers r4-r11 by pushing then popping
+	; them to & from the stack at the beginning & end of the handler
+	PUSH {r4-r11}
+
+	;Clear Interrupt: Set the bit 4 (RXIC) in the UART Interrupt Clear Register (UARTICR)
+	;UART0 Base Address: 0x4000C000
+	;UARTICR Offset: 0x044
+	;UART0 Bit Position: Bit 4
+
+	MOV r0, #0xC000
+	MOVT r0, #0x4000
+
+
+	LDR r2, [r0, #0x44]
+
+	ORR r2, r2, #16		;bit 4 has 1
+
+	STR r2, [r0, #0x44]	;clearing interrupt bit
+
+
+	MOV r4, #0
+	MOV r5, #1		;setting registers ot the values of directions
+	MOV r6, #2
+	MOV r7, #3
+
+
+	BL simple_read_character		;retrieving the character pressed
+	ldr r1, prt_to_dataBlock		;base address of the data Block
+
+	;a ascii: #97
+	;d ascii: #100
+	;s ascii: #115
+	;w ascii: #119
+
+	CMP r0, #100		;if char== 'd'
+	BNE check_a_char
+	STRB r4, [r1, #3]	;storing 00 in dataBlock[3]
+	B direction_end
+check_a_char:
+	CMP r0, #97		;if char== 'a'
+	BNE check_w_char
+	STRB r5, [r1, #3]	;storing 01 in dataBlock[3]
+	B direction_end
+check_w_char:
+	CMP r0, #119		;if char== 'w'
+	BNE check_s_char
+	STRB r6, [r1, #3]	;storing 10 in dataBlock[3]
+	B direction_end
+check_s_char:
+	CMP r0, #115		;if char== 's'
+	BNE direction_end
+	STRB r7, [r1, #3]	;storing 11 in dataBlock[3]
+
+direction_end:			;note: if the char is NONE of the above, the direction remains the same
+	POP{r4-r11}
+	POP {lr}
 	BX lr
 
 exit: 
