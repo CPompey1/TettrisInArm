@@ -15,6 +15,7 @@
 	.global output_string_nw
 	.global parse_string
 	.global int2string_nn
+	.global output_string_withlen_nw
 
 prompt:	.string "Press SW1 or a key (q to quit)", 0
 data_block: .word 0
@@ -28,8 +29,8 @@ home: .string 27, "[0;0H",0
 clear_screen: .string 27, "[2J",0 ; clear screen cursor position moved to home row 0, line 0zzz
 backspace:	.string 27, "[08", 0
 asterisk:	.string 27, "*", 0
-num_1_string: .string 27, " "
-num_2_string: .string 27, " "
+num_1_string: .string 27, "   "
+num_2_string: .string 27, "   "
 
 	.text
 
@@ -71,44 +72,6 @@ lab6:	; This is your main routine which is called from your C wrapper
 
 	;LocationY
 	LDRB r1, [r0,#1]
-
-	;**************************START TEST********************
-
-	ldr r0, ptr_to_clear_screen
-	bl output_string
-	mov r0,#0
-	mov r1,#1
-	bl print_cursor_location
-
-	mov r0,#0
-	mov r1,#2
-	bl print_cursor_location
-
-	mov r0,#0
-	mov r1,#3
-	bl print_cursor_location
-	mov r0,#0
-	mov r1,#4
-	bl print_cursor_location
-	mov r0,#0
-	mov r1,#0
-	bl print_cursor_location
-	mov r0,#1
-	mov r1,#0
-	bl print_cursor_location
-	mov r0,#2
-	mov r1,#0
-	bl print_cursor_location
-	mov r0,#3
-	mov r1,#0
-	bl print_cursor_location
-	mov r0,#4
-	mov r1,#0
-	bl print_cursor_location
-	mov r0,#5
-	mov r1,#0
-	bl print_cursor_location
-	;*******************END TEST******************
 
 	;Start game
 	BL Timer_init
@@ -437,39 +400,73 @@ print_cursor_location:
 	mov r4, r0
 	;locationY
 	mov r5, r1
-
-	;load cursor_postion_string
-	ldr r0,ptr_to_cursor_position
+	;print cursor_postion_string
+	mov r0,#27
 	;output_string_nw
-	bl output_string_nw
-
+	bl output_character
+	mov r0, #91
+	bl output_character
 	;load locationX
 	mov r0,r4
 	ldr r1, ptr_num_1_string
 	;int2string (into num1_string)
 	bl int2string_nn
+
+	;if num1 >= 10 branch
+	mov r0,r4
+	cmp r0, #10
+	BGE num1_greater
+	;else num1 less
+	mov r0, #48
+	bl output_character
+	mov r1, #1
+	ldr r0, ptr_num_1_string
+	bl output_string_withlen_nw
+	b locationYout
+
+num1_greater:
 	ldr r0,ptr_num_1_string
+	mov r1, #2
 	;output_string_nw
-	bl output_string_nw
+	bl output_string_withlen_nw
+
+locationYout:
 	;load Decimal(";")
 	mov r0, #59
 	;output_character
 	bl output_character
 
+
 	;load locationY
 	mov r0,r5
 	ldr r1, ptr_num_2_string
-	;int2string(into num2_string)
+	;int2string (into num1_string)
 	bl int2string_nn
-	;output_string_nw
-	ldr r0, ptr_num_2_string
-	bl output_string_nw
 
-	;load Decmial("H")
-	mov r0, #72
-	;output_character
+	;if num2 >= 10 branch
+	mov r0,r5
+	cmp r0, #10
+	BGE num2_greater
+	;else num1 less
+	mov r0, #48
 	bl output_character
+	mov r1, #1
+	ldr r0, ptr_num_2_string
+	bl output_string_withlen_nw
+	b end_print_cursor
 
+num2_greater:
+	ldr r0,ptr_num_1_string
+	mov r1, #2
+	;output_string_nw
+	bl output_string_withlen_nw
+
+
+
+end_print_cursor:
+	;output H
+	mov r0, #72
+	bl output_character
 	;load Decimal("/0")
 	mov r0, #0
 	;output_character

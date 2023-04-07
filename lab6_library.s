@@ -14,6 +14,7 @@
 	.global output_string_nw
 	.global parse_string
 	.global int2string_nn
+	.global output_string_withlen_nw
 
 .text
 uart_interrupt_init:
@@ -174,6 +175,30 @@ Outputting_nw:
 
 
 	POP{r4}
+	POP {lr}
+	mov pc, lr
+
+output_string_withlen_nw:
+;transmits a ASCII string for display in PuTTy.
+;The base address of the string should be passed into the routine in r0
+;length of string is stored in r1
+
+	PUSH {lr}   ; Store register lr on stack
+	PUSH {r4,r5}	; pushing r4 to make a copy of base address (currently in r0)
+
+	mov r5,r1
+
+	MOV r4, r0	;making copy of base address in r4
+Outputting_withlen_nw:
+	LDRB r0, [r4]		; loading the character from the base address in r4
+	BL output_character	;call output_character
+	ADD r4, r4, #1;		increment r4's address by 1
+	sub r5, r5, #1
+	CMP r5, #0			;checking if data in r4 is NULL
+	BNE Outputting_withlen_nw		; if it is not, go back
+
+
+	POP{r4,r5}
 	POP {lr}
 	mov pc, lr
 
