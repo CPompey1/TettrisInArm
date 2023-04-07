@@ -65,14 +65,16 @@ lab6:	; This is your main routine which is called from your C wrapper
 	
 	;Updata locationX and locationY to be at center
 	LDR r0, prt_to_dataBlock ;load the datablock into r0
-
+	MOV r2, #1
 	MOV r1, #10 ;move 10 into r1 as intial location will be 10,10 as that is the middle of a 20x20 board
 	;LocationX
-	LDRB r1, [r0,#0]
+	STRB r1, [r0,#0]
 
 	;LocationY
-	LDRB r1, [r0,#1]
+	STRB r1, [r0,#1]
 
+	;Init speed
+	STRB r2, [r0,#2]
 	;Start game
 	BL Timer_init
 
@@ -114,6 +116,8 @@ Timer_Handler:
 	LDR r1, [r0]
 	ORR r1, #1
 	str r1,[r0]
+
+	mov r5, #1
 		;Clear screen
 	LDR r0, ptr_to_clear_screen ;clear the screen and moves cursor to 0,0
 	BL output_string
@@ -145,18 +149,21 @@ bottom:
         LDR r0, ptr_to_top_bottom_borders ;move top and bottom border to the register used as an argument in output_string
         BL output_string ; branch to output_string
 
+
 insert_asterisk:
-		ldr r0,ptr_to_cursor_position  ;cursor position to position of x,y
-		BL output_string_nw ;move cursor
 
-		;LDR r0, ptr_to_backspace ;backspace once to get rid of the whitespace and prepare it to be replaced with "*"
-		;BL output_string_nw; backspace once
-		;LDR r0, ptr_to_asterisk ; asterisk
-		;BL output_string_nw ;enter the asterisk
-		MOV r0, #42
-		bl output_character
+	ldr r2, prt_to_dataBlock
+	ldrb r0, [r2,#0]
+	ldrb r1, [r2,#1]
+	bl print_cursor_location
 
-	;print_location
+	;LDR r0, ptr_to_asterisk ; asterisk
+	;BL output_string_nw ;enter the asterisk
+	MOV r0, #42
+	bl output_character
+
+
+;update_location
 	;Load locationX and locationY
 	ldr r0, prt_to_dataBlock
 
@@ -180,7 +187,6 @@ insert_asterisk:
 
 	;Store location
 	STRB r1, [r0,#0]
-
 
 	;branch to end of if
 	b end_timer_handler
@@ -220,7 +226,14 @@ not_two:
 	STRB r1, [r2,#1]
 	;Change cursor back to end of string
 	;Pop registers
+
+
 end_timer_handler:
+;BACKSPACE
+;LDR r0, ptr_to_backspace ;backspace once to get rid of the whitespace and prepare it to be replaced with "*"
+	;mov r0, #8
+	;bl output_character
+	bl border_check
 	POP {r4-r11}
 	POP {lr}
 	BX LR
@@ -475,6 +488,39 @@ end_print_cursor:
 	POP {lr}
 	mov pc,lr
 
+
+border_check:
+	push {lr}
+
+	ldr r0, prt_to_dataBlock
+	;checkX
+	ldrb r1, [r0,#0]
+	cmp r1, #22
+	bge set_endbit
+	cmp r1, #0
+	blt set_endbit
+
+	;checkY
+	ldrb r1, [r0,#1]
+	cmp r1, #20
+	bge set_endbit
+	cmp r1, #0
+	blt set_endbit
+
+	;Else
+	b end_border_check
+
+set_endbit
+	ldrb r1, [r0,#3]
+	mov r2, #1
+	lsl r2,r2,#7
+	orr r1,r2,r2
+	strb r1, [r0,#3]
+
+end_border_check:
+
+	pop {lr}
+	mov pc,lr
 
 
 	.end
