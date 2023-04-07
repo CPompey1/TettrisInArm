@@ -15,6 +15,7 @@
 	.global parse_string
 	.global int2string_nn
 	.global output_string_withlen_nw
+	.global tiva_pushbtn_init
 
 .text
 uart_interrupt_init:
@@ -62,7 +63,7 @@ gpio_interrupt_init:
 	; to initialize SW1.
 
 
-	bl tiva_pushbtn_init
+
 	;enable interrupt sensitivitye register GPIOIS
 	MOV r0, #0x5404
 	MOVT r0, #0x4002

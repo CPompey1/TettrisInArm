@@ -16,6 +16,7 @@
 	.global parse_string
 	.global int2string_nn
 	.global output_string_withlen_nw
+	.global tiva_pushbtn_init
 
 prompt:	.string "Press SW1 or a key (q to quit)", 0
 data_block: .word 0
@@ -25,12 +26,15 @@ output: .string "Total Moves Made: ", 0
 top_bottom_borders: .string " --------------------", 0
 side_borders: .string "|                    |", 0 ;The board is 20 characters by 20 characters in size (actual size inside the walls).
 cursor_position: .string 27, "[" ;set up a cursor position variable that will be 10 - 10
-home: .string 27, "[0;0H",0
+home: .string 27, "[1;1H",0
 clear_screen: .string 27, "[2J",0 ; clear screen cursor position moved to home row 0, line 0zzz
 backspace:	.string 27, "[08", 0
 asterisk:	.string 27, "*", 0
 num_1_string: .string 27, "   "
 num_2_string: .string 27, "   "
+saveCuror:	  .string 27, "[s",0
+restoreCuror: .string 27, "[u",0
+center: 	  .string 27, "[10;10H", 0
 
 	.text
 
@@ -50,6 +54,10 @@ ptr_to_asterisk:				.word asterisk
 ptr_to_home: 					.word home
 ptr_num_1_string: 				.word num_1_string
 ptr_num_2_string: 				.word num_2_string
+ptr_saveCuror:					.word saveCuror
+ptr_restoreCuror:				.word restoreCuror
+ptr_center:						.word center
+
 ;***************Data packet orginization*******************************
 ;	|LocationX	|LocationY	|SW1Presses	|Direction| EndBit|
 ;	0		    8		    16		    24-25	  31
@@ -60,25 +68,28 @@ lab6:	; This is your main routine which is called from your C wrapper
 	LDR r4, ptr_to_top_bottom_borders ; load border string into registers
 	LDR r5, ptr_to_side_borders ;load string into register
 	BL uart_init
+	bl tiva_pushbtn_init
 	BL uart_interrupt_init
 	BL gpio_interrupt_init
 	
+	;Clear screen
+	LDR r0, ptr_to_clear_screen ;clear the screen and moves cursor to 0,0
+	BL output_string_nw
+
 	;Updata locationX and locationY to be at center
-	LDR r0, prt_to_dataBlock ;load the datablock into r0
-	MOV r2, #1
+	LDR r0, ptr_center ;load the datablock into r0
+	bl output_string_nw
 	MOV r1, #10 ;move 10 into r1 as intial location will be 10,10 as that is the middle of a 20x20 board
+	ldr r0,prt_to_dataBlock
 	;LocationX
 	STRB r1, [r0,#0]
-
 	;LocationY
 	STRB r1, [r0,#1]
 
-	;Init speed
-	STRB r2, [r0,#2]
-	;Start game
-	BL Timer_init
 
-	LDR r5, ptr_to_cursor_position
+	;Init speed
+	MOV r2, #1
+	STRB r2, [r0,#2]
 	;Start game
 	BL Timer_init
 
@@ -89,6 +100,7 @@ inf_loop:
 	CMP r1, #1
 	BNE inf_loop
 
+;PRINT ENDING PROMPT HERE
 	;poll until endbit is 1
 	POP {lr}
 	MOV pc, lr
@@ -118,50 +130,47 @@ Timer_Handler:
 	str r1,[r0]
 
 	mov r5, #1
-		;Clear screen
+
+	;Save cursor position
+	ldr r0,ptr_saveCuror
+	bl output_string_nw
+
+
+	;Clear screen
 	LDR r0, ptr_to_clear_screen ;clear the screen and moves cursor to 0,0
-	BL output_string
+	BL output_string_nw
 	LDR r0, ptr_to_home
-	BL output_string
+	BL output_string_nw
 
 ;Print_borders
 print_borders:
-        LDR r0, ptr_to_top_bottom_borders ;move top and bottom border to the register used as an argument in output_string
-        BL output_string ; branch to output_string
+    LDR r0, ptr_to_top_bottom_borders ;move top and bottom border to the register used as an argument in output_string
+    BL output_string ; branch to output_string
 
-        MOV r1, #0 ;move 0 into r1 (or any free register) to use as a counter
+    MOV r1, #0 ;move 0 into r1 (or any free register) to use as a counter
 
-        LDR r0, ptr_to_side_borders ; move side borders to the register used as an argument in output_string (could do it in the loop but this is a bit faster i think)
-        BL side_loop ; branch to loop that will print out the sides of the board
+    LDR r0, ptr_to_side_borders ; move side borders to the register used as an argument in output_string (could do it in the loop but this is a bit faster i think)
+    BL side_loop ; branch to loop that will print out the sides of the board
 
 side_loop:
-        CMP r1, #20  ;(or #21?) compare to see if we have entered the loop 20 times (if we have printed all the side borders)
-        BEQ bottom ;if all the sides are done we just have to print the bottom border
+    CMP r1, #20  ;(or #21?) compare to see if we have entered the loop 20 times (if we have printed all the side borders)
+    BEQ bottom ;if all the sides are done we just have to print the bottom border
 
-		push {r0-r4}
-		LDR r0, ptr_to_side_borders
-        BL output_string ;r0 should already hold the side borders
-		pop {r0-r4}
-        ADD r1, r1, #1 ;increment counter
-        B side_loop ;Branch back to the loop to print the next line or
+	push {r0-r4}
+	LDR r0, ptr_to_side_borders
+    BL output_string ;r0 should already hold the side borders
+	pop {r0-r4}
+    ADD r1, r1, #1 ;increment counter
+    B side_loop ;Branch back to the loop to print the next line or
 
 bottom:
-        LDR r0, ptr_to_top_bottom_borders ;move top and bottom border to the register used as an argument in output_string
-        BL output_string ; branch to output_string
+    LDR r0, ptr_to_top_bottom_borders ;move top and bottom border to the register used as an argument in output_string
+    BL output_string ; branch to output_string
 
 
-insert_asterisk:
-
-	ldr r2, prt_to_dataBlock
-	ldrb r0, [r2,#0]
-	ldrb r1, [r2,#1]
-	bl print_cursor_location
-
-	;LDR r0, ptr_to_asterisk ; asterisk
-	;BL output_string_nw ;enter the asterisk
-	MOV r0, #42
-	bl output_character
-
+;Restore cursor
+	ldr r0,ptr_restoreCuror
+	bl output_string_nw
 
 ;update_location
 	;Load locationX and locationY
@@ -187,7 +196,8 @@ insert_asterisk:
 
 	;Store location
 	STRB r1, [r0,#0]
-
+	mov r0, r4
+	bl movCursor_right
 	;branch to end of if
 	b end_timer_handler
 
@@ -198,10 +208,10 @@ not_zero:
 	bne not_one
 	;update locationX & Y
 	sub r1, r1,r4
-
 	;Store location
 	STRB r1, [r0,#0]
-
+	mov r0,r4
+	bl movCursor_left
 	b end_timer_handler
 
 not_one:
@@ -209,11 +219,10 @@ not_one:
 	bne not_two
 	;update locationX & Y
 	add r2, r2,r4
-
 	;Store location
-	STRB r1, [r2,#1]
-
-	CMP r2, #9
+	STRB r2, [r0,#1]
+	mov r0, r4
+	bl movCursor_up
 
 	b end_timer_handler
 
@@ -223,16 +232,31 @@ not_two:
 	;update locationX & Y
 	SUB r2, r2,r4
 	;Store location
-	STRB r1, [r2,#1]
+	STRB r2, [r0,#1]
 	;Change cursor back to end of string
 	;Pop registers
-
+	mov r0, r4
+	bl movCursor_down
 
 end_timer_handler:
-;BACKSPACE
-;LDR r0, ptr_to_backspace ;backspace once to get rid of the whitespace and prepare it to be replaced with "*"
-	;mov r0, #8
-	;bl output_character
+
+insert_asterisk:
+	MOV r0, #42
+	bl output_character
+	;Move back
+	mov r0, #8
+	bl output_character
+
+
+	;Incrament spaces
+	ldr r0, prt_to_dataBlock
+	ldrb r2, [r0,#2]
+	ldr r1, prt_to_spacesMoved_block
+	ldr r0,[r1]
+	add r0,r0, r2
+	str r0,[r1]
+
+	;Check borders
 	bl border_check
 	POP {r4-r11}
 	POP {lr}
@@ -522,5 +546,119 @@ end_border_check:
 	pop {lr}
 	mov pc,lr
 
+;Moves cursor by a r0 amount of places
+movCursor_right:
+	PUSH {lr}
+	;Save spaces to move by
+	mov r5,r0
 
+loop_right:
+	sub r5,r5,#1
+	;output escape sequence
+	mov r0,#27
+	bl output_character
+
+	;output '['
+	mov r0, #91
+	bl output_character
+	;output value to move by
+	mov r0,r5
+	bl output_character
+	;output ending character
+	mov r0,#67
+	bl output_character
+	;ouptut Null byte
+	mov r0,#0
+	bl output_character
+
+	cmp r5,#0
+	bne loop_right
+
+	POP {lr}
+	mov pc,lr
+
+movCursor_left:
+	PUSH {lr}
+	;Save spaces to move by
+	mov r5,r0
+loop_left:
+	sub r5,r5,#1
+	;output escape sequence
+	mov r0,#27
+	bl output_character
+
+	;output '['
+	mov r0, #91
+	bl output_character
+	;output value to move by
+	mov r0,r5
+	bl output_character
+	;output ending character
+	mov r0,#68
+	bl output_character
+	;ouptut Null byte
+	mov r0,#0
+	bl output_character
+	cmp r5,#0
+	bne loop_left
+
+	POP {lr}
+	mov pc,lr
+
+movCursor_up:
+	PUSH {lr}
+
+	;Save spaces to move by
+	mov r5,r0
+loop_up:
+	sub r5, r5,#1
+	;output escape sequence
+	mov r0,#27
+	bl output_character
+
+	;output '['
+	mov r0, #91
+	bl output_character
+	;output value to move by
+	mov r0,r5
+	bl output_character
+	;output ending characterB
+	mov r0,#65
+	bl output_character
+	;ouptut Null byte
+	mov r0,#0
+	bl output_character
+	cmp r5,#0
+	bne loop_up
+	POP {lr}
+	mov pc,lr
+
+movCursor_down:
+	PUSH {lr}
+
+	;Save spaces to move by
+	mov r5,r0
+loop_down:
+	sub r5,r5,#1
+	;output escape sequence
+	mov r0,#27
+	bl output_character
+
+	;output '['
+	mov r0, #91
+	bl output_character
+	;output value to move by
+	mov r0,r5
+	bl output_character
+	;output ending character
+	mov r0,#66
+	bl output_character
+	;ouptut Null byte
+	mov r0,#0
+	bl output_character
+	cmp r5,#0
+	bne loop_down
+
+	POP {lr}
+	mov pc,lr
 	.end
