@@ -14,6 +14,7 @@
 	.global lab6
 	.global output_string_nw
 	.global parse_string
+	.global int2string_nn
 
 prompt:	.string "Press SW1 or a key (q to quit)", 0
 data_block: .word 0
@@ -22,11 +23,13 @@ spacesMoved_block: .word 0
 output: .string "Total Moves Made: ", 0 
 top_bottom_borders: .string " --------------------", 0
 side_borders: .string "|                    |", 0 ;The board is 20 characters by 20 characters in size (actual size inside the walls).
-cursor_position: .string 27, "[10;10H",0 ;set up a cursor position variable that will be 10 - 10
+cursor_position: .string 27, "[" ;set up a cursor position variable that will be 10 - 10
 home: .string 27, "[0;0H",0
 clear_screen: .string 27, "[2J",0 ; clear screen cursor position moved to home row 0, line 0zzz
 backspace:	.string 27, "[08", 0
 asterisk:	.string 27, "*", 0
+num_1_string: .string 27, " "
+num_2_string: .string 27, " "
 
 	.text
 
@@ -44,6 +47,8 @@ ptr_to_output:				.word output
 ptr_to_backspace:				.word backspace
 ptr_to_asterisk:				.word asterisk
 ptr_to_home: 					.word home
+ptr_num_1_string: 				.word num_1_string
+ptr_num_2_string: 				.word num_2_string
 ;***************Data packet orginization*******************************
 ;	|LocationX	|LocationY	|SW1Presses	|Direction| EndBit|
 ;	0		    8		    16		    24-25	  31
@@ -66,6 +71,44 @@ lab6:	; This is your main routine which is called from your C wrapper
 
 	;LocationY
 	LDRB r1, [r0,#1]
+
+	;**************************START TEST********************
+
+	ldr r0, ptr_to_clear_screen
+	bl output_string
+	mov r0,#0
+	mov r1,#1
+	bl print_cursor_location
+
+	mov r0,#0
+	mov r1,#2
+	bl print_cursor_location
+
+	mov r0,#0
+	mov r1,#3
+	bl print_cursor_location
+	mov r0,#0
+	mov r1,#4
+	bl print_cursor_location
+	mov r0,#0
+	mov r1,#0
+	bl print_cursor_location
+	mov r0,#1
+	mov r1,#0
+	bl print_cursor_location
+	mov r0,#2
+	mov r1,#0
+	bl print_cursor_location
+	mov r0,#3
+	mov r1,#0
+	bl print_cursor_location
+	mov r0,#4
+	mov r1,#0
+	bl print_cursor_location
+	mov r0,#5
+	mov r1,#0
+	bl print_cursor_location
+	;*******************END TEST******************
 
 	;Start game
 	BL Timer_init
@@ -157,7 +200,7 @@ insert_asterisk:
 	;LocationX
 	LDRB r1, [r0,#0]
 
-	;LocationY
+	;LocationYs
 	LDRB r2, [r0,#1]
 	
 	;Load direction
@@ -175,26 +218,6 @@ insert_asterisk:
 	;Store location
 	STRB r1, [r0,#0]
 
-	;Change cursor location string to equal the new position of x and y 
-	CMP r1, #9
-	BGT	second_dig
-	b end_timer_handler
-second_dig:
-
-	PUSH {r0-r4}
-	MOV r0, r1
-	BL int2string
-
-	LDR r3, [r1]
-	LDR r0, ptr_to_cursor_postion
-	MOV r2, #2
-	STRB r3, [r0,r2]
-
-	LDR r3, [r1, #1]
-	LDR r0, ptr_to_cursor_postion
-	MOV r2, #3
-	STRB r3, [r0,r2]
-	POP {r0-r4}
 
 	;branch to end of if
 	b end_timer_handler
@@ -210,27 +233,6 @@ not_zero:
 	;Store location
 	STRB r1, [r0,#0]
 
-	CMP r1, #9
-	BGT	second_dig1
-	b end_timer_handler
-second_dig1:
-
-	PUSH {r0-r4}
-	MOV r0, r1
-	BL int2string
-
-	LDR r3, [r1]
-	LDR r0, ptr_to_cursor_postion
-	MOV r2, #2
-	STRB r3, [r0,r2]
-
-	LDR r3, [r1, #1]
-	LDR r0, ptr_to_cursor_postion
-	MOV r2, #3
-	STRB r3, [r0,r2]
-	POP {r0-r4}
-	;change both digits
-	;branch to end of if
 	b end_timer_handler
 
 not_one:
@@ -243,25 +245,7 @@ not_one:
 	STRB r1, [r2,#1]
 
 	CMP r2, #9
-	BGT	second_dig2
-	b end_timer_handler
-second_dig2:
 
-	PUSH {r0-r4}
-	MOV r0, r2
-	BL int2string
-
-	LDR r3, [r2]
-	LDR r0, ptr_to_cursor_postion
-	MOV r1, #2
-	STRB r3, [r0,r1]
-
-	LDR r3, [r2, #1]
-	LDR r0, ptr_to_cursor_postion
-	MOV r1, #3
-	STRB r3, [r0,r1]
-	POP {r0-r4}
-	;branch to end of if
 	b end_timer_handler
 
 not_two:
@@ -269,54 +253,8 @@ not_two:
 	bne end_timer_handler
 	;update locationX & Y
 	SUB r2, r2,r4
-
 	;Store location
 	STRB r1, [r2,#1]
-
-	CMP r2, #9
-	BGT	second_dig3
-	CMP r2, #10
-	BLT one_digi
-
-one_digi:
-	PUSH {r0-r4}
-	MOV r0, r2
-	BL int2string
-
-	LDR r3, [r2]
-	LDR r0, ptr_to_cursor_postion
-	MOV r1, #2
-	STRB r3, [r0,r1]
-
-	LDR r3, [r2, #1]
-	LDR r0, ptr_to_cursor_postion
-	MOV r1, #3
-	STRB r3, [r0,r1]
-	POP {r0-r4}
-
-
-
-	b end_timer_handler
-second_dig3:
-
-	PUSH {r0-r4}
-	MOV r0, r2
-	BL int2string
-
-	LDR r3, [r2]
-	LDR r0, ptr_to_cursor_postion
-	MOV r1, #2
-	STRB r3, [r0,r1]
-
-	LDR r3, [r2, #1]
-	LDR r0, ptr_to_cursor_postion
-	MOV r1, #3
-	STRB r3, [r0,r1]
-	POP {r0-r4}
-	;branch to end of if
-	b end_timer_handler
-
-
 	;Change cursor back to end of string
 	;Pop registers
 end_timer_handler:
@@ -488,6 +426,58 @@ exit:
 	BL output_string
 	;move the counter for # of moves into the register that int2string uses as an argument
 	;int2string on that register
+
+***************************HELER SUBROUTINES ****************************************
+;r0-locationX(int), r1-locationY(int)
+;change_cursor(r0,r1)
+print_cursor_location:
+	PUSH {lr}
+	PUSH {r4-r5}
+	;locationX
+	mov r4, r0
+	;locationY
+	mov r5, r1
+
+	;load cursor_postion_string
+	ldr r0,ptr_to_cursor_position
+	;output_string_nw
+	bl output_string_nw
+
+	;load locationX
+	mov r0,r4
+	ldr r1, ptr_num_1_string
+	;int2string (into num1_string)
+	bl int2string_nn
+	ldr r0,ptr_num_1_string
+	;output_string_nw
+	bl output_string_nw
+	;load Decimal(";")
+	mov r0, #59
+	;output_character
+	bl output_character
+
+	;load locationY
+	mov r0,r5
+	ldr r1, ptr_num_2_string
+	;int2string(into num2_string)
+	bl int2string_nn
+	;output_string_nw
+	ldr r0, ptr_num_2_string
+	bl output_string_nw
+
+	;load Decmial("H")
+	mov r0, #72
+	;output_character
+	bl output_character
+
+	;load Decimal("/0")
+	mov r0, #0
+	;output_character
+	bl output_character
+	POP {r4-r5}
+	POP {lr}
+	mov pc,lr
+
 
 
 	.end

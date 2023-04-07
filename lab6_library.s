@@ -13,7 +13,7 @@
 	.global simple_read_character
 	.global output_string_nw
 	.global parse_string
-
+	.global int2string_nn
 
 .text
 uart_interrupt_init:
@@ -610,6 +610,82 @@ store_null:
 	POP {lr}
 	mov pc, lr
 
+;Your code for your int2string routine is placed here
+;Inputs: r0 - Integer to store as a string
+;		 r1 - Address to store 32-byte
+;no null byte at the end
+;
+;Used Registers:
+int2string_nn:
+	PUSH {lr}   ; Store register lr on stack
+	PUSH {r4}
+
+	;Store copy of base address
+	MOV r4,r1
+
+	CMP r0, #0
+	beq int_is_zero_nn
+
+	;Push r0 and r1 before the call to integer_digits
+	PUSH {r0,r1}
+
+	;r1 = integer_digits(r0,r1-doesntmatter)
+	MOV r1, #0x0
+	BL integer_digit
+
+	;Store (numDigits - 1) in r2
+	SUB r2, r0, #0x1
+
+	;Pop old r0 & r1 from stack
+	POP {r0,r1}
+
+
+int2StringLoop1_nn:
+	;Push r0,r1,r2 prior to calling nth digit
+	PUSH {r0,r1,r2}
+
+	;MOV r2(nth digit to find) to r1
+	MOV r1,r2
+
+	;r0(nth place digit),r1(num digits) = integerDigit(r0(dec),r1(n))
+	BL integer_digit
+
+
+	;Store result + AsciiHexOffset in r3
+	ADD r3,r1,#48
+
+	;Pop r0,r1,r2 POST integerDigit call
+	POP {r0,r1,r2}
+
+	;Store lower byte of r3 into memory pointed to by r1
+	STRB r3, [r1]
+
+	;Incrament mem address r1
+	ADD r1,r1,#0x1
+
+	;Decrament nth place r2
+	SUB r2,r2,#0x1
+
+	;Branch to int2StringLoop1 if r2 < 0  (or ==-1)
+	CMP r2,#-1
+	BNE int2StringLoop1_nn
+	;Else
+	b store_null_nn
+
+int_is_zero_nn:
+	MOV r2, #48
+	STRB r2, [r1]
+	ADD r1, r1,#1
+
+store_null_nn:
+;Reset to base address
+	MOV r1,r4
+
+	POP {r4}
+	POP {lr}
+	mov pc, lr
+
+
 ;Integer_digit
 ;Inputs: r0	- Decimal value
 ;		 r1 - n place in decimal value to find
@@ -794,28 +870,13 @@ read_tiva_pushbutton_end:
 	MOV pc, lr
 
 parse_string: ; start
-    PUSH {lr}       ; save the return address
-    MOV r5, #0      ; initialize loop counter to 0
-    loop:
-        LRDB r4, [r2, r4]  ; load current character
-        CMP r5, #0          ; check for null terminator
-        BEQ done            ; exit loop if end of string
-        ADD r4, r4, #1      ; increment loop counter
-        CMP r3, r4          ; compare loop counter with index (r2 has index that we want to change)
-        BNE loop            ; continue looping if not equal
-        STRB r2, [r2, r4]   ; store new character at index
-    done:
-        pop {lr}        ; return
-        mov pc, lr
-strlen:
-    PUSH {lr}
-    LDRB r0, [r1, r2]
-    ADD r2,r2,#1 ;intialized as a 0
-    CMP r0, #0x0
-    BNE strlen
-
-    POP{lr}
+    PUSH {lr}       ; save the return
+	STRB r2, [r0,r1]
+    pop {lr}        ; return
     mov pc, lr
+
+
+
 ;****************************************************************END HELPER SUBROUTINES************************************************************************
 
 
