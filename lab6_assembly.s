@@ -31,6 +31,7 @@ backspace:	.string 27, "[08", 0
 asterisk:	.string 27, "*", 0
 num_1_string: .string 27, "   "
 num_2_string: .string 27, "   "
+end_of_text: .string 27, "[3",0
 
 	.text
 
@@ -50,6 +51,7 @@ ptr_to_asterisk:				.word asterisk
 ptr_to_home: 					.word home
 ptr_num_1_string: 				.word num_1_string
 ptr_num_2_string: 				.word num_2_string
+ptr_end_of_text:					.word end_of_text
 ;***************Data packet orginization*******************************
 ;	|LocationX	|LocationY	|SW1Presses	|Direction| EndBit|
 ;	0		    8		    16		    24-25	  31
@@ -118,14 +120,16 @@ Timer_Handler:
 	str r1,[r0]
 
 	mov r5, #1
-		;Clear screen
+	;Clear screen
+
 	LDR r0, ptr_to_clear_screen ;clear the screen and moves cursor to 0,0
-	BL output_string
+	BL output_string_nw
+	;bl clear_screen_routine
 	LDR r0, ptr_to_home
-	BL output_string
+	BL output_string_nw
 
 ;Print_borders
-print_borders:
+;print_borders:
         LDR r0, ptr_to_top_bottom_borders ;move top and bottom border to the register used as an argument in output_string
         BL output_string ; branch to output_string
 
@@ -231,8 +235,11 @@ not_two:
 end_timer_handler:
 ;BACKSPACE
 ;LDR r0, ptr_to_backspace ;backspace once to get rid of the whitespace and prepare it to be replaced with "*"
-	;mov r0, #8
-	;bl output_character
+	mov r0, #8
+	bl output_character
+
+	mov r0, #7
+	bl output_character
 	bl border_check
 	POP {r4-r11}
 	POP {lr}
@@ -522,5 +529,15 @@ end_border_check:
 	pop {lr}
 	mov pc,lr
 
+;Clear screem subroutine
+clear_screen_routine:
+	push {lr}
+	;go to end of text
+	ldr r0, ptr_end_of_text
+	bl output_string_nw
+	ldr r0, ptr_to_clear_screen
+	bl output_string_nw
 
+	pop {lr}
+	mov pc,lr
 	.end
