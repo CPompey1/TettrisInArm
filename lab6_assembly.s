@@ -17,6 +17,7 @@
 	.global int2string_nn
 	.global output_string_withlen_nw
 	.global tiva_pushbtn_init
+	.global int2string
 
 prompt:	.string "Press SW1 or a key (q to quit)", 0
 data_block: .word 0
@@ -65,7 +66,7 @@ ptr_center:						.word center
 lab6:	; This is your main routine which is called from your C wrapper
 	PUSH {lr}   		; Store lr to stack
 	
-	LDR r4, ptr_to_top_bottom_borders ; load border string into registers
+s	LDR r4, ptr_to_top_bottom_borders ; load border string into registers
 	LDR r5, ptr_to_side_borders ;load string into register
 	BL uart_init
 	bl tiva_pushbtn_init
@@ -100,7 +101,34 @@ inf_loop:
 	CMP r1, #1
 	BNE inf_loop
 
+
+	;Disable timer
+	;disable GPTMCTL TAEN (1)->1st bit of:  0x4003000C
+	MOV r0, #0x000C
+	MOVT r0, #0x4003
+	ldr r1, [r0]
+	mvn r2, #1
+	and r1,r1,r2
+	str r1, [r0]
+
 ;PRINT ENDING PROMPT HERE
+a	ldr r0, ptr_to_clear_screen
+	bl output_string
+	ldr r0, ptr_to_home
+	bl output_string
+
+	LDR r0, ptr_to_output
+	BL output_string_nw
+	LDR r0, prt_to_spacesMoved_block
+	LDR r0, [r0]
+	LDR r1, ptr_num_1_string
+	BL int2string ;outputs string into r1
+	ldr r0, ptr_num_1_string
+	;MOV r0, r1 ;set up r0 as the argument for output string by moving the string with the number of moves into r0
+	BL output_string
+
+
+
 	;poll until endbit is 1
 	POP {lr}
 	MOV pc, lr

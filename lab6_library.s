@@ -16,6 +16,7 @@
 	.global int2string_nn
 	.global output_string_withlen_nw
 	.global tiva_pushbtn_init
+	.global int2string
 
 .text
 uart_interrupt_init:
