@@ -75,8 +75,53 @@ s	LDR r4, ptr_to_top_bottom_borders ; load border string into registers
 	
 	;Clear screen
 	LDR r0, ptr_to_clear_screen ;clear the screen and moves cursor to 0,0
-	BL output_string_nw
+	BL output_string
 
+	ldr r0, ptr_to_home
+	bl output_string_nw
+
+
+	;Print cursoer  location test
+	mov r0,#0
+	mov r1,#0
+	bl print_cursor_location
+
+	mov r0,#1
+	mov r1,#1
+	bl print_cursor_location
+
+	mov r0,#2
+	mov r1,#7
+	bl print_cursor_location
+
+	mov r0,#5
+	mov r1,#5
+	bl print_cursor_location
+
+	mov r0,#10
+	mov r1,#11
+	bl print_cursor_location
+
+
+	mov r0,#10
+	mov r1,#13
+	bl print_cursor_location
+
+	mov r0,#10
+	mov r1,#15
+	bl print_cursor_location
+
+	mov r0,#10
+	mov r1,#14
+	bl print_cursor_location
+
+	mov r0,#16
+	mov r1,#16
+	bl print_cursor_location
+
+	mov r0,#17
+	mov r1,#18
+	bl print_cursor_location
 	;Updata locationX and locationY to be at center
 	LDR r0, ptr_center ;load the datablock into r0
 	bl output_string_nw
@@ -112,7 +157,7 @@ inf_loop:
 	str r1, [r0]
 
 ;PRINT ENDING PROMPT HERE
-a	ldr r0, ptr_to_clear_screen
+	ldr r0, ptr_to_clear_screen
 	bl output_string
 	ldr r0, ptr_to_home
 	bl output_string
@@ -521,7 +566,7 @@ locationYout:
 	b end_print_cursor
 
 num2_greater:
-	ldr r0,ptr_num_1_string
+	ldr r0,ptr_num_2_string
 	mov r1, #2
 	;output_string_nw
 	bl output_string_withlen_nw
